@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "OW64 Dashboard",
+  "version": "0.1.0",
+  "description": "A local-only new tab dashboard for your OW64 (Harada method) chart.",
+  "chrome_url_overrides": { "newtab": "newtab.html" },
+  "permissions": ["storage", "search", "favicon"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'none'"
+  }
+}
