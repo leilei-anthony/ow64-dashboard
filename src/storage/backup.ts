@@ -2,7 +2,10 @@ import { SCHEMA_VERSION, type AppData } from '../model/types';
 import {
   normalizeChart,
   normalizeCountdowns,
+  normalizeHabitLog,
+  normalizeHabits,
   normalizeLogs,
+  normalizePomodoroLog,
   normalizeQuickLinks,
   normalizeSettings,
   normalizeTasks,
@@ -47,13 +50,16 @@ export function parseBackup(text: string): ParsedBackup {
     countdowns: normalizeCountdowns(r.countdowns),
     quickLinks: normalizeQuickLinks(r.quickLinks),
     tasks: normalizeTasks(r.tasks), // absent in v1 backups
+    pomodoroLog: normalizePomodoroLog(r.pomodoroLog), // absent before v3
+    habits: normalizeHabits(r.habits), // absent before v4
+    habitLog: normalizeHabitLog(r.habitLog),
     settings: normalizeSettings(r.settings),
   };
   const days = Object.keys(data.logs).length;
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const summary =
     `Replaces your chart (“${chart.goal.text || 'untitled goal'}”), ${plural(days, 'day')} of progress, ` +
-    `${plural(data.tasks.length, 'task')}, ${plural(data.countdowns.length, 'countdown')} and ` +
+    `${plural(data.tasks.length, 'task')}, ${plural(data.habits.length, 'habit')}, ${plural(data.countdowns.length, 'countdown')} and ` +
     `${plural(data.quickLinks.length, 'quick link')}.`;
   return { ok: true, data, summary };
 }

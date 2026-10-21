@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { DayKey } from '../model/types';
-import { chart, logs, settings, today, viewDay } from '../storage/store';
+import type { Habit, HabitLog } from '../model/types';
+import { chart, habitLog, habits, logs, pomodoroLog, settings, today, viewDay } from '../storage/store';
+import { habitsMetOn, isActive, isMet, isScheduled } from '../lib/habits';
 import { dayOfWeek, dayRange, daysBetween, monthShort, shortDate, weekStart, yearOf } from '../lib/dates';
 import { actionIndex, dayCount, type HeatFilter } from '../lib/stats';
 import { goToDay, heatFilter, heatYear } from '../ui';
@@ -16,6 +18,12 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // Sequential ramp on a dark surface: empty is darkest, more is brighter.
 // "All" uses a neutral ramp (no pillar identity); a filter uses that pillar's hue.
 const EMPTY = '#2a2d34';
+const POMODORO = '#F0694F';
+const HABITS = '#A493F0';
+
+/** One habit's day for the heatmap: done (or clean, for an avoid habit) on a day it was tracked. */
+const habitHit = (h: Habit | undefined, log: HabitLog, day: string) =>
+  h && isActive(h, day) && isScheduled(h, day) && isMet(h, log, day) && (h.kind === 'avoid' || (log[day]?.[h.id] ?? 0) > 0) ? 1 : 0;
 const NEUTRAL = '#e9eaed';
 const STEPS = [0.3, 0.52, 0.76, 1];
 
@@ -51,7 +59,11 @@ export function Heatmap() {
 
   const pillarById = (id: string) => c.pillars.find((p) => p.id === id);
   const hue =
-    filter.kind === 'pillar'
+    filter.kind === 'pomodoro'
+      ? POMODORO
+      : filter.kind === 'habits' || filter.kind === 'habit'
+        ? HABITS
+      : filter.kind === 'pillar'
       ? pillarById(filter.pillarId)?.color
       : filter.kind === 'action'
         ? pillarById(index.get(filter.actionId)?.pillarId ?? '')?.color
@@ -63,9 +75,21 @@ export function Heatmap() {
   const gridStart = weekStart(jan1, ws);
   const weeks = Math.floor(daysBetween(gridStart, dec31) / 7) + 1;
   const days = dayRange(jan1, dec31);
-  const counts = days.map((d) => dayCount(allLogs, d, filter, index));
+  const pomodoros = pomodoroLog.value;
+  const hLog = habitLog.value;
+  const oneHabit = filter.kind === 'habit' ? habits.value.find((h) => h.id === filter.habitId) : undefined;
+  const counts = days.map((d) =>
+    filter.kind === 'pomodoro'
+      ? pomodoros[d]?.count ?? 0
+      : filter.kind === 'habits'
+        ? habitsMetOn(habits.value, hLog, d).length
+        : filter.kind === 'habit'
+          ? habitHit(oneHabit, hLog, d)
+          : dayCount(allLogs, d, filter, index),
+  );
   const max = Math.max(1, ...counts);
-  const level = (n: number) => (n === 0 ? 0 : filter.kind === 'action' ? 4 : Math.max(1, Math.ceil((n / max) * 4)));
+  const binary = filter.kind === 'action' || filter.kind === 'habit';
+  const level = (n: number) => (n === 0 ? 0 : binary ? 4 : Math.max(1, Math.ceil((n / max) * 4)));
   const total = counts.reduce((a, b) => a + b, 0);
   const active = counts.filter((n) => n > 0).length;
 
@@ -81,7 +105,7 @@ export function Heatmap() {
   return (
     <section class="panel">
       <div class="heat-head">
-        <h2>Progress in {year}</h2>
+        <h2>Heatmap · {year}</h2>
         <HeatFilterSelect filter={filter} hue={hue} />
         <div class="year-nav">
           <button
@@ -156,9 +180,13 @@ export function Heatmap() {
 
       <div class="heat-foot">
         <span class="muted small">
-          {filter.kind === 'action'
-            ? `Done on ${plural(active, 'day')}`
-            : `${plural(total, 'tick')} · ${plural(active, 'active day')}`}
+          {binary
+            ? `${oneHabit?.kind === 'avoid' ? 'Clean' : 'Done'} on ${plural(active, 'day')}`
+            : filter.kind === 'habits'
+              ? `${plural(total, 'check-in')} · ${plural(active, 'day')}`
+            : filter.kind === 'pomodoro'
+              ? `${plural(total, 'pomodoro')} · ${plural(active, 'day')}`
+              : `${plural(total, 'tick')} · ${plural(active, 'active day')}`}
         </span>
         <span class="legend" aria-hidden="true">
           Less
@@ -173,9 +201,22 @@ export function Heatmap() {
 }
 
 const encode = (f: HeatFilter) =>
-  f.kind === 'all' ? 'all' : f.kind === 'pillar' ? `p:${f.pillarId}` : `a:${f.actionId}`;
+  f.kind === 'all'
+    ? 'all'
+    : f.kind === 'pomodoro'
+      ? 'pomo'
+      : f.kind === 'habits'
+        ? 'habits'
+        : f.kind === 'habit'
+          ? `h:${f.habitId}`
+          : f.kind === 'pillar'
+            ? `p:${f.pillarId}`
+            : `a:${f.actionId}`;
 
 function decode(value: string): HeatFilter {
+  if (value === 'pomo') return { kind: 'pomodoro' };
+  if (value === 'habits') return { kind: 'habits' };
+  if (value.startsWith('h:')) return { kind: 'habit', habitId: value.slice(2) };
   if (value.startsWith('p:')) return { kind: 'pillar', pillarId: value.slice(2) };
   if (value.startsWith('a:')) return { kind: 'action', actionId: value.slice(2) };
   return { kind: 'all' };
@@ -193,6 +234,17 @@ function HeatFilterSelect({ filter, hue }: { filter: HeatFilter; hue?: string })
         onChange={(e) => (heatFilter.value = decode(e.currentTarget.value))}
       >
         <option value="all">All actions</option>
+        <option value="pomo">Pomodoros</option>
+        {habits.value.length > 0 && (
+          <optgroup label="Habits">
+            <option value="habits">All habits</option>
+            {habits.value.map((h) => (
+              <option key={h.id} value={`h:${h.id}`}>
+                {h.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
         <optgroup label="Pillars">
           {c.pillars.map((p) => (
             <option key={p.id} value={`p:${p.id}`}>
@@ -225,11 +277,29 @@ function HeatTooltip({
 }) {
   const c = chart.value;
   const entry = logs.value[hover.day];
-  const n = dayCount(logs.value, hover.day, filter, index);
+  const pomo = pomodoroLog.value[hover.day];
+  const metHabits = filter.kind === 'habits' ? habitsMetOn(habits.value, habitLog.value, hover.day) : [];
+  const theHabit = filter.kind === 'habit' ? habits.value.find((h) => h.id === filter.habitId) : undefined;
+  const n =
+    filter.kind === 'pomodoro'
+      ? pomo?.count ?? 0
+      : filter.kind === 'habits'
+        ? metHabits.length
+        : filter.kind === 'habit'
+          ? habitHit(theHabit, habitLog.value, hover.day)
+          : dayCount(logs.value, hover.day, filter, index);
   const pillar = filter.kind === 'pillar' ? c.pillars.find((p) => p.id === filter.pillarId) : undefined;
 
   const headline =
-    filter.kind === 'action'
+    filter.kind === 'habits'
+      ? `${n} habit${n === 1 ? '' : 's'}`
+      : filter.kind === 'habit'
+        ? theHabit?.kind === 'avoid'
+          ? n ? 'Clean' : 'Slipped or not tracked'
+          : n ? 'Done' : 'Not done'
+      : filter.kind === 'pomodoro'
+      ? `${n} pomodoro${n === 1 ? '' : 's'}${n ? ` · ${pomo!.minutes} min` : ''}`
+      : filter.kind === 'action'
       ? n
         ? 'Done'
         : 'Not done'
@@ -238,7 +308,7 @@ function HeatTooltip({
         : `${n} action${n === 1 ? '' : 's'}`;
 
   // Group the day's ticks by pillar (only the ones matching the filter).
-  const groups = filter.kind === 'action' ? [] : c.pillars
+  const groups = filter.kind !== 'all' && filter.kind !== 'pillar' ? [] : c.pillars
     .filter((p) => filter.kind === 'all' || p.id === filter.pillarId)
     .map((p) => ({
       pillar: p,
@@ -262,6 +332,11 @@ function HeatTooltip({
         <strong>{headline}</strong>
         <span class="muted">{shortDate(hover.day)}</span>
       </div>
+      {metHabits.length > 0 && (
+        <div class="tooltip-group">
+          <span>{metHabits.map((h) => h.name).join(', ')}</span>
+        </div>
+      )}
       {groups.map((g) => (
         <div key={g.pillar.id} class="tooltip-group">
           <span class="dot" style={{ background: g.pillar.color }} />

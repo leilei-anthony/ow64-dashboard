@@ -5,6 +5,7 @@ import { replaceAction } from '../src/model/chartOps';
 import { logicalDay } from '../src/lib/dates';
 import {
   carriedDays,
+  cycleIn,
   desiredAutoTicks,
   finishIn,
   isCurrent,
@@ -15,7 +16,9 @@ import {
   recurrenceLabel,
   reopenIn,
   resolveTop3Action,
+  setStatusIn,
   sortForDay,
+  taskStatus,
 } from '../src/lib/tasks';
 
 const task = (over: Partial<Task> = {}): Task => ({
@@ -196,5 +199,63 @@ describe('Top 3 and auto-ticks', () => {
     expect(sortForDay(list, D).map((t) => t.id)).toEqual(['b', 'd', 'a', 'c']);
     // Yesterday's star doesn't count today.
     expect(sortForDay(list, '2026-10-16').map((t) => t.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+});
+
+describe('three states: [ ] [/] [x]', () => {
+  const ids = () => {
+    let k = 0;
+    return () => `spawn${++k}`;
+  };
+
+  it('works out the state from the flag, the steps and completion', () => {
+    expect(taskStatus(task())).toBe('todo');
+    expect(taskStatus(task({ inProgress: true }))).toBe('partial');
+    expect(taskStatus(task({ subtasks: [{ id: 's', text: 'a', done: true }, { id: 't', text: 'b', done: false }] }))).toBe('partial');
+    expect(taskStatus(task({ completedAt: '2026-10-15', inProgress: true }))).toBe('done');
+  });
+
+  it('cycles [ ] → [/] → [x] → [ ]', () => {
+    let list = [task()];
+    list = cycleIn(list, 't1', '2026-10-15', ids());
+    expect(list[0]).toEqual(task({ inProgress: true }));
+    list = cycleIn(list, 't1', '2026-10-15', ids());
+    expect(list[0]).toEqual(task({ completedAt: '2026-10-15' })); // the [/] mark is cleared on completion
+    list = cycleIn(list, 't1', '2026-10-15', ids());
+    expect(list[0]).toEqual(task());
+  });
+
+  it('completing from [/] on a past day records that day', () => {
+    const list = cycleIn([task({ inProgress: true })], 't1', '2026-10-13', ids());
+    expect(list[0].completedAt).toBe('2026-10-13');
+  });
+
+  it('reopening a task whose steps are ticked shows [/] and keeps the steps', () => {
+    const steps = [{ id: 's', text: 'a', done: true }];
+    const list = cycleIn([task({ completedAt: '2026-10-15', subtasks: steps })], 't1', '2026-10-15', ids());
+    expect(list[0].completedAt).toBeUndefined();
+    expect(list[0].subtasks).toEqual(steps);
+    expect(taskStatus(list[0])).toBe('partial');
+  });
+
+  it('completing a repeating task from [/] schedules the next one, which starts at [ ]', () => {
+    const weekly = task({ inProgress: true, recurrence: { kind: 'weekly', days: [1] }, scheduledFor: '2026-10-12' });
+    const list = cycleIn([weekly], 't1', '2026-10-12', ids());
+    expect(list).toHaveLength(2);
+    expect(taskStatus(list[1])).toBe('todo');
+    expect(list[1].scheduledFor).toBe('2026-10-19');
+  });
+
+  it('jumps straight to a state, and leaves dropped tasks alone', () => {
+    expect(setStatusIn([task()], 't1', 'done', '2026-10-15', ids())[0].completedAt).toBe('2026-10-15');
+    expect(setStatusIn([task({ completedAt: '2026-10-15' })], 't1', 'partial', '2026-10-15', ids())[0]).toEqual(task({ inProgress: true }));
+    const dropped = [task({ droppedAt: '2026-10-15' })];
+    expect(setStatusIn(dropped, 't1', 'done', '2026-10-15', ids())).toBe(dropped);
+  });
+
+  it('the [/] mark survives saving', async () => {
+    const { normalizeTasks } = await import('../src/storage/normalize');
+    expect(normalizeTasks([task({ inProgress: true })])[0].inProgress).toBe(true);
+    expect(normalizeTasks([{ ...task(), inProgress: 'yes' }])[0]).not.toHaveProperty('inProgress');
   });
 });

@@ -1,14 +1,16 @@
 import { useRef, useState } from 'preact/hooks';
-import type { Settings } from '../model/types';
+import { SECTION_IDS, type SectionId, type Settings } from '../model/types';
 import { blankChart, seedChart } from '../model/seed';
-import { chart, freshData, quickLinks, replaceAll, settings, snapshot, today, updateSettings } from '../storage/store';
+import { calendarSources, chart, freshData, quickLinks, replaceAll, settings, snapshot, today, updateSettings } from '../storage/store';
 import { makeBackup, parseBackup, type ParsedBackup } from '../storage/backup';
 import { daysBetween } from '../lib/dates';
 import { resolveTop3Action } from '../lib/tasks';
 import { actionIndex } from '../lib/stats';
 import { STALE_CHOICES } from '../storage/normalize';
-import { settingsOpen } from '../ui';
+import { editMode, settingsOpen } from '../ui';
 import { ActionOptionGroups } from './ActionOptions';
+import { CalendarSettings } from './CalendarSettings';
+import { PomodoroSettingsSection } from './PomodoroSettings';
 import { Modal } from './Modal';
 
 const hourLabel = (h: number) => (h === 0 ? '12 AM (midnight)' : h < 12 ? `${h} AM` : '12 PM (noon)');
@@ -49,7 +51,7 @@ function BackupSection() {
       <h3>Backup</h3>
       <p class="muted small">
         Everything is stored only in this browser. Uninstalling the extension or clearing its data deletes it, so export
-        a backup now and then.
+        a backup now and then. Calendar links aren't included; you'd paste them again.
       </p>
       <p class={`small ${stale ? 'warn' : 'muted'}`}>
         Last backup: {age === null ? 'never' : age === 0 ? 'today' : `${age} day${age === 1 ? '' : 's'} ago`}
@@ -111,7 +113,7 @@ function ResetSection() {
       {pending ? (
         <div class="confirm-box">
           <p>
-            This erases your chart, all progress, notes, tasks and countdowns. Quick links and settings are kept.
+            This erases your chart, all progress, notes, tasks, habits and countdowns. Quick links and settings are kept.
             Export a backup first if you're unsure.
           </p>
           <div class="btn-row">
@@ -132,6 +134,103 @@ function ResetSection() {
             Start with a blank chart
           </button>
         </div>
+      )}
+    </section>
+  );
+}
+
+const SECTION_LABELS: Record<SectionId, string> = {
+  chart: 'OW64 chart',
+  habits: 'Habits',
+  tasks: 'Tasks',
+  schedule: 'Schedule',
+  countdowns: 'Countdowns',
+  week: 'Stats',
+  heatmap: 'Heatmap',
+  notes: 'Notes',
+};
+
+function SectionsSection() {
+  const { sections, sectionOrder: order } = settings.value;
+  const [dragId, setDragId] = useState<SectionId | null>(null);
+  const [overId, setOverId] = useState<SectionId | null>(null);
+  const setSection = (id: SectionId, on: boolean) => {
+    updateSettings({ sections: { ...sections, [id]: on } });
+    if (id === 'chart' && !on) editMode.value = false;
+  };
+  const move = (id: SectionId, to: number) => {
+    const next = order.filter((x) => x !== id);
+    next.splice(Math.max(0, Math.min(to, next.length)), 0, id);
+    updateSettings({ sectionOrder: next });
+  };
+  const isDefault = order.every((id, i) => id === SECTION_IDS[i]);
+
+  return (
+    <section class="settings-section">
+      <h3>Dashboard sections</h3>
+      <ol class="section-list">
+        {order.map((id, i) => {
+          const label = SECTION_LABELS[id];
+          return (
+            <li
+              key={id}
+              class={`section-row${dragId === id ? ' is-dragging' : ''}${overId === id && dragId !== id ? ' is-over' : ''}`}
+              draggable
+              onDragStart={(e) => {
+                setDragId(id);
+                e.dataTransfer!.effectAllowed = 'move';
+                e.dataTransfer!.setData('text/plain', label);
+              }}
+              onDragOver={(e) => {
+                if (!dragId) return;
+                e.preventDefault();
+                setOverId(id);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragId) move(dragId, i);
+                setDragId(null);
+                setOverId(null);
+              }}
+              onDragEnd={() => {
+                setDragId(null);
+                setOverId(null);
+              }}
+            >
+              <span class="drag-handle" aria-hidden="true">
+                ⠿
+              </span>
+              <label class="toggle">
+                <input type="checkbox" checked={sections[id]} onChange={(e) => setSection(id, e.currentTarget.checked)} />
+                {label}
+                {id === 'schedule' && !calendarSources.value.length && <span class="muted small">(needs a calendar)</span>}
+              </label>
+              <span class="section-move">
+                <button type="button" class="icon-btn icon-btn-small" aria-label={`Move ${label} up`} disabled={i === 0} onClick={() => move(id, i - 1)}>
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn icon-btn-small"
+                  aria-label={`Move ${label} down`}
+                  disabled={i === order.length - 1}
+                  onClick={() => move(id, i + 1)}
+                >
+                  ↓
+                </button>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p class="muted small">
+        Drag to reorder, or use the arrows. On wide screens the chart keeps its own column: it's on the left unless it's
+        last in this list, then it moves to the right.
+      </p>
+      {!isDefault && (
+        <button type="button" class="link-btn" onClick={() => updateSettings({ sectionOrder: [...SECTION_IDS] })}>
+          Reset order
+        </button>
       )}
     </section>
   );
@@ -172,6 +271,8 @@ const SHORTCUTS: [string, string][] = [
   ['← →', 'Previous / next day'],
   ['T', 'Back to today'],
   ['A', 'Add a task'],
+  ['P', 'Focus view (pomodoro timer)'],
+  ['Space / S', 'Focus view: start or pause / skip'],
   ['N', 'Write a note for the day'],
   ['Right-click', 'Cell menu: note, streak, heatmap filter'],
   ['Esc', 'Close dialogs and menus'],
@@ -182,6 +283,7 @@ export function SettingsDrawer() {
   const s = settings.value;
   return (
     <Modal title="Settings" variant="drawer" onClose={() => (settingsOpen.value = false)}>
+      <SectionsSection />
       <section class="settings-section">
         <h3>Tracking</h3>
         <label class="field">
@@ -208,6 +310,8 @@ export function SettingsDrawer() {
       </section>
 
       <TasksSection />
+      <PomodoroSettingsSection />
+      <CalendarSettings />
 
       <section class="settings-section">
         <h3>New tab</h3>

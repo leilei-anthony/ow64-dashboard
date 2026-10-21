@@ -1,4 +1,4 @@
-import { chart, logs, settings, today, viewDay } from '../storage/store';
+import { chart, logs, pomodoroLog, settings, today, viewDay } from '../storage/store';
 import { addDays, monthEnd, monthStart, shortDate, weekStart } from '../lib/dates';
 import { activeDays, pillarWeekCompletion, totalTicks } from '../lib/stats';
 import { currentStreak, type Streak } from '../lib/streaks';
@@ -71,9 +71,20 @@ export function StatsPanel() {
     .sort((a, b) => b.streak.value - a.streak.value)
     .slice(0, 5);
 
+  const pomo = pomodoroLog.value;
+  const pomoDay = pomo[day];
+  const pomoWeek = Array.from({ length: 7 }, (_, i) => pomo[addDays(wFrom, i)]?.count ?? 0).reduce((a, b) => a + b, 0);
+
   return (
     <section class="panel">
-      <h2>Week of {shortDate(wFrom)}</h2>
+      <h2>Stats · Week of {shortDate(wFrom)}</h2>
+      {(pomoDay || pomoWeek > 0) && (
+        <p class="pomo-stat">
+          <span aria-hidden="true">🍅</span> <strong>{pomoDay?.count ?? 0}</strong> {day === today.value ? 'today' : `on ${shortDate(day)}`}
+          {' · '}
+          {pomoDay?.minutes ?? 0} min focus · {pomoWeek} this week
+        </p>
+      )}
       <div class="stat-row">
         <div class="stat">
           <div class="stat-num">{weekNow}</div>

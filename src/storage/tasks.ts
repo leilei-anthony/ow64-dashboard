@@ -1,7 +1,17 @@
 import { batch } from '@preact/signals';
 import type { DayKey, Task } from '../model/types';
 import { uid } from '../model/ids';
-import { desiredAutoTicks, finishIn, finishedOn, isFinished, reopenIn, starredFor } from '../lib/tasks';
+import {
+  cycleIn,
+  desiredAutoTicks,
+  finishIn,
+  finishedOn,
+  isFinished,
+  reopenIn,
+  setStatusIn,
+  starredFor,
+  type TaskStatus,
+} from '../lib/tasks';
 import { applyAutoTicks, chart, queue, settings, tasks, today } from './store';
 import { TASKS_KEY, doneTasksForYear, openTasks, tasksDoneKey } from './serialize';
 
@@ -47,10 +57,12 @@ function clean(t: Task): Task {
   return Object.fromEntries(Object.entries(t).filter(([, v]) => v !== undefined)) as unknown as Task;
 }
 
-export function addTask(text: string) {
+/** Add to today's list, or schedule it for a later day. */
+export function addTask(text: string, scheduledFor?: DayKey) {
   const value = text.trim();
   if (!value) return;
-  commit([...tasks.value, { id: uid(), text: value, createdAt: today.value, subtasks: [] }]);
+  const later = scheduledFor && scheduledFor > today.value ? { scheduledFor } : {};
+  commit([...tasks.value, { id: uid(), text: value, createdAt: today.value, subtasks: [], ...later }]);
 }
 
 export type TaskEdit = Partial<Pick<Task, 'text' | 'scheduledFor' | 'countdown' | 'actionId' | 'recurrence' | 'subtasks'>>;
@@ -59,12 +71,11 @@ export function editTask(id: string, patch: TaskEdit) {
   update(id, (t) => clean({ ...t, ...patch }));
 }
 
-/** Complete on `day` (the viewed day), or undo if it's already done. */
-export function toggleTask(id: string, day: DayKey) {
-  const t = find(id);
-  if (!t) return;
-  commit(t.completedAt ? reopenIn(tasks.value, id) : finishIn(tasks.value, id, day, 'completed', uid));
-}
+/** Click on the box: [ ] → [/] → [x] → [ ]. Done counts for `day` (the viewed day). */
+export const cycleTask = (id: string, day: DayKey) => commit(cycleIn(tasks.value, id, day, uid));
+
+/** Jump straight to a state (right-click menu). */
+export const setTaskStatus = (id: string, status: TaskStatus, day: DayKey) => commit(setStatusIn(tasks.value, id, status, day, uid));
 
 export const dropTask = (id: string) => commit(finishIn(tasks.value, id, today.value, 'dropped', uid));
 
@@ -99,7 +110,7 @@ export function toggleSubtask(id: string, subId: string, day: DayKey) {
   const subtasks = t.subtasks.map((s) => (s.id === subId ? { ...s, done: !s.done } : s));
   let next = tasks.value.map((x) => (x.id === id ? { ...x, subtasks } : x));
   const allDone = subtasks.length > 0 && subtasks.every((s) => s.done);
-  if (allDone && !isFinished(t)) next = finishIn(next, id, day, 'completed', uid);
+  if (allDone && !isFinished(t)) next = setStatusIn(next, id, 'done', day, uid);
   else if (!allDone && t.completedAt) next = reopenIn(next, id);
   commit(next);
 }

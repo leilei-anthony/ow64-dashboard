@@ -11,6 +11,8 @@ export const heatFilter = signal<HeatFilter>({ kind: 'all' });
 /** Year shown in the heatmap; null follows the viewed day. */
 export const heatYear = signal<number | null>(null);
 export const settingsOpen = signal(false);
+/** This tab shows the full-screen pomodoro view instead of the dashboard. */
+export const focusView = signal(false);
 
 export type EditTarget =
   | { kind: 'goal' }
@@ -22,6 +24,9 @@ export const cellNoteTarget = signal<{ actionId: string; day: DayKey } | null>(n
 
 /** Open task editor; `focus: 'date'` jumps to the date field (from "Move ▾ → Pick a date"). */
 export const taskDialog = signal<{ id: string; focus?: 'date' } | null>(null);
+
+/** Open the habit editor; `id: null` adds a new habit. */
+export const habitDialog = signal<{ id: string | null } | null>(null);
 
 /** Open link editor; `link: null` adds a new one. */
 export const linkDialog = signal<{ link: QuickLink | null } | null>(null);

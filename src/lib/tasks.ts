@@ -134,6 +134,45 @@ export function finishIn(
   return [...list.map((x) => (x.id === id ? finished : x)), next];
 }
 
+// ---- Three states: [ ] not done · [/] in progress · [x] done -------------
+
+export type TaskStatus = 'todo' | 'partial' | 'done';
+
+/** Done when completed; in progress when marked [/] or when some of its steps are ticked. */
+export function taskStatus(t: Task): TaskStatus {
+  if (t.completedAt) return 'done';
+  return t.inProgress || t.subtasks.some((s) => s.done) ? 'partial' : 'todo';
+}
+
+function clearProgress(list: Task[], id: string): Task[] {
+  return list.map((x) => {
+    if (x.id !== id || !x.inProgress) return x;
+    const { inProgress: _drop, ...rest } = x;
+    return rest;
+  });
+}
+
+/**
+ * Set a task to [ ], [/] or [x]. Done means completed on `day` (with everything
+ * completing does: next repeat, chart ticks); leaving done reopens it.
+ */
+export function setStatusIn(list: Task[], id: string, status: TaskStatus, day: DayKey, makeId: () => string): Task[] {
+  const t = list.find((x) => x.id === id);
+  if (!t || t.droppedAt) return list;
+  if (status === 'done') return t.completedAt ? list : clearProgress(finishIn(list, id, day, 'completed', makeId), id);
+  const reopened = t.completedAt ? reopenIn(list, id) : list;
+  if (status === 'todo') return clearProgress(reopened, id);
+  return reopened.map((x) => (x.id === id ? { ...x, inProgress: true as const } : x));
+}
+
+const NEXT_STATUS: Record<TaskStatus, TaskStatus> = { todo: 'partial', partial: 'done', done: 'todo' };
+
+/** One click on the box: [ ] → [/] → [x] → [ ]. */
+export function cycleIn(list: Task[], id: string, day: DayKey, makeId: () => string): Task[] {
+  const t = list.find((x) => x.id === id);
+  return t ? setStatusIn(list, id, NEXT_STATUS[taskStatus(t)], day, makeId) : list;
+}
+
 /** Undo complete/drop. Removes the recurring next instance if it hasn't been touched. */
 export function reopenIn(list: Task[], id: string): Task[] {
   const t = list.find((x) => x.id === id);

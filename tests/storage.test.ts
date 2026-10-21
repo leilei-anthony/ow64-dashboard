@@ -32,6 +32,12 @@ function sample(): AppData {
       { id: 'done25', text: 'Old thing', createdAt: '2025-12-01', completedAt: '2025-12-30', subtasks: [] },
       { id: 'drop26', text: 'Never mind', createdAt: '2026-10-01', droppedAt: '2026-10-12', top3: '2026-10-12', subtasks: [] },
     ],
+    pomodoroLog: { '2026-10-13': { count: 3, minutes: 75, byTask: { open1: 2 } }, '2025-12-30': { count: 1, minutes: 25 } },
+    habits: [
+      { id: 'bed', name: 'Make bed', kind: 'check', schedule: { kind: 'daily' }, time: 'morning', createdAt: '2026-10-01' },
+      { id: 'water', name: 'Water', kind: 'count', target: 8, unit: 'glasses', schedule: { kind: 'days', days: [1, 3, 5] }, time: 'anytime', createdAt: '2026-10-01', archivedAt: '2026-10-20' },
+    ],
+    habitLog: { '2026-10-13': { bed: 1, water: 6 }, '2025-12-31': { bed: 1 } },
     settings: { ...DEFAULT_SETTINGS, matrixHidden: true },
   };
 }
@@ -85,6 +91,21 @@ describe('storage layout', () => {
   it('fills in settings added in later versions', () => {
     expect(normalizeSettings({ dayStartHour: 2 })).toEqual({ ...DEFAULT_SETTINGS, dayStartHour: 2 });
     expect(normalizeSettings({ dayStartHour: 40, weekStartsOn: 5 })).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('keeps chosen dashboard sections and shows any it does not know about', () => {
+    const s = normalizeSettings({ sections: { chart: false, notes: false, heatmap: 'nope', bogus: false } });
+    expect(s.sections).toEqual({ ...DEFAULT_SETTINGS.sections, chart: false, notes: false });
+    expect(s.sections).not.toHaveProperty('bogus');
+  });
+
+  it('keeps a saved section order, dropping unknown ids and putting new sections at their default spot', () => {
+    const s = normalizeSettings({ sectionOrder: ['notes', 'chart', 'notes', 'bogus', 'tasks'] });
+    expect(s.sectionOrder).toEqual(['notes', 'chart', 'habits', 'tasks', 'schedule', 'countdowns', 'week', 'heatmap']);
+    // A saved order from before Habits existed: Habits lands right before Tasks, not at the bottom.
+    const before = normalizeSettings({ sectionOrder: ['notes', 'tasks', 'chart', 'countdowns', 'schedule', 'week', 'heatmap'] });
+    expect(before.sectionOrder).toEqual(['notes', 'habits', 'tasks', 'chart', 'countdowns', 'schedule', 'week', 'heatmap']);
+    expect(normalizeSettings({}).sectionOrder).toEqual(DEFAULT_SETTINGS.sectionOrder);
   });
 
   it('drops malformed log entries but keeps good ones', () => {

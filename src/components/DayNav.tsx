@@ -3,7 +3,8 @@ import { longDate, shortDate } from '../lib/dates';
 import { shiftDay } from '../ui';
 import { IconChevron } from './icons';
 
-export function DayNav() {
+/** `showCount` is off when the chart is hidden: "x / 64 done" counts chart ticks. */
+export function DayNav({ showCount = true }: { showCount?: boolean }) {
   const day = viewDay.value;
   const isToday = day === today.value;
   const total = chart.value.pillars.reduce((n, p) => n + p.actions.filter((a) => a.text.trim()).length, 0);
@@ -29,9 +30,11 @@ export function DayNav() {
         >
           <IconChevron side="right" />
         </button>
-        <div class="daynav-count">
-          <strong>{done}</strong> / {total} done
-        </div>
+        {showCount && (
+          <div class="daynav-count">
+            <strong>{done}</strong> / {total} done
+          </div>
+        )}
       </div>
       {!isToday && (
         <div class="past-banner" role="status">

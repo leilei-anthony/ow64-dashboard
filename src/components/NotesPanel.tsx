@@ -43,7 +43,7 @@ export function NotesPanel() {
         id="day-note"
         class="note-input"
         value={text}
-        rows={4}
+        rows={10}
         placeholder="How did today go? (N)"
         onFocus={() => (focused.current = true)}
         onBlur={() => {

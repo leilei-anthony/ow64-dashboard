@@ -340,28 +340,119 @@ textarea {
   min-width: 0;
 }
 
-/* Stack the side panels under the chart when the chart (sized by window height)
+.dash-card {
+  min-width: 0;
+}
+
+/* Chart last in Settings → its column moves to the right. */
+.dash.chart-right {
+  grid-template-columns: minmax(420px, 640px) var(--mx);
+  grid-template-areas:
+    '.    nav'
+    'side main';
+}
+
+/* One centered column, in the order chosen in Settings (the chart can sit between
+   cards). Used for the chart alone, the cards alone, or when two columns don't fit. */
+.dash.is-single {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 860px;
+}
+.dash.is-single .dash-side {
+  display: contents;
+}
+.dash.is-single .dash-nav {
+  order: -1;
+  width: min(100%, var(--mx));
+}
+.dash.is-single .dash-main {
+  width: min(100%, var(--mx));
+}
+.dash.is-single .dash-card {
+  width: min(100%, max(var(--mx), 560px));
+}
+.dash.no-chart .dash-nav,
+.dash.no-chart .dash-card {
+  width: min(100%, 720px);
+}
+
+.dash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12vh;
+  color: var(--text-2);
+}
+
+.section-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.section-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+.section-row:hover {
+  background: var(--panel-2);
+}
+.section-row.is-dragging {
+  opacity: 0.4;
+}
+.section-row.is-over {
+  border-color: var(--muted);
+  border-style: dashed;
+}
+.section-row .toggle {
+  flex: 1;
+}
+.drag-handle {
+  color: var(--muted);
+  cursor: grab;
+  user-select: none;
+}
+.section-move {
+  display: flex;
+  gap: 2px;
+}
+
+/* Stack everything in one column when the chart (sized by window height)
    plus the narrowest side column (420px) and the gap (24px) no longer fit. */
 @container app (width < calc(clamp(480px, 100vh - 290px, 860px) + 444px)) {
   .dash {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'nav' 'main' 'side';
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
     max-width: 860px;
   }
-  .dash-main {
-    align-items: center;
+  .dash-side {
+    display: contents;
   }
   .dash-nav {
-    justify-self: center;
-  }
-  .dash-nav,
-  .dash-main .matrix-card {
+    order: -1;
     width: min(100%, var(--mx));
   }
-  .dash-side {
-    justify-self: center;
+  .dash-main {
+    width: min(100%, var(--mx));
+  }
+  .dash-card {
     width: min(100%, max(var(--mx), 560px));
-    margin-top: 12px;
+  }
+  .dash.no-chart .dash-nav,
+  .dash.no-chart .dash-card {
+    width: min(100%, 720px);
   }
 }
 
@@ -615,6 +706,270 @@ textarea {
   color: var(--text-2);
 }
 
+/* Habits */
+.habits-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.habits-head h2 {
+  flex: 1;
+  margin: 0;
+}
+.habit-group + .habit-group {
+  margin-top: 6px;
+}
+.panel .habit-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+button.habit-group-head {
+  cursor: pointer;
+}
+.habit-group-done {
+  color: #8fd18b;
+  letter-spacing: 0;
+}
+.habit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.habit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+.habit:hover,
+.habit:focus-within {
+  background: rgba(255, 255, 255, 0.035);
+}
+.habit.is-dragging {
+  opacity: 0.4;
+}
+.habit.is-over {
+  border-color: var(--muted);
+  border-style: dashed;
+}
+.habit > input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0 3px;
+  accent-color: #8fd18b;
+  cursor: pointer;
+}
+.habit-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.habit-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.habit-name:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+}
+.habit.is-done .habit-name {
+  color: var(--text-2);
+}
+.habit.kind-check.is-done .habit-name {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+.habit-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.habit-bar {
+  width: 70px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.habit-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: #7cc4f0;
+  transition: width 0.2s;
+}
+.habit.is-done .habit-bar span {
+  background: #8fd18b;
+}
+.habit-step {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+/* An SVG plus, so it sits in the exact center (a text "+" rides on the font's baseline). */
+.habit-step svg {
+  display: block;
+  stroke-width: 2.5;
+}
+.habit-step:hover {
+  border-color: var(--muted);
+}
+.habit-step.is-met {
+  border-color: #8fd18b;
+  color: #8fd18b;
+}
+.habit-undo {
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0;
+}
+.habit:hover .habit-undo,
+.habit:focus-within .habit-undo {
+  opacity: 1;
+}
+.habit-avoid {
+  width: 22px;
+  text-align: center;
+  color: #8fd18b;
+  font-weight: 700;
+}
+.habit-avoid.is-slipped {
+  color: var(--danger);
+}
+.habit.is-slipped .habit-meta {
+  color: var(--danger);
+}
+.habit-slip {
+  opacity: 0.7;
+}
+.habit:hover .habit-slip {
+  opacity: 1;
+}
+.habit-streak {
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.habit.is-archived {
+  gap: 8px;
+}
+.habit.is-archived .habit-name {
+  flex: 1;
+  cursor: default;
+  color: var(--text-2);
+}
+.habit-archived {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.habit-starters {
+  margin: 4px 0 8px;
+}
+.habit-starters p {
+  margin: 0 0 6px;
+}
+.chip-btn {
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+.chip-btn:hover {
+  border-color: var(--muted);
+}
+
+/* Habit dialog */
+.segmented {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.segmented button {
+  flex: 1;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.segmented button.is-on {
+  background: var(--text);
+  color: #16171a;
+  font-weight: 600;
+}
+.habit-history {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 3px;
+}
+.habit-history span {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: #2a2d34;
+}
+.habit-history .hist-met {
+  background: #8fd18b;
+}
+.habit-history .hist-missed {
+  background: #3a3d45;
+}
+.habit-history .hist-slipped {
+  background: var(--danger);
+}
+.habit-history .hist-today {
+  outline: 1px solid var(--muted);
+}
+.habit-history .hist-off {
+  background: none;
+  outline: 1px solid #2a2d34;
+  outline-offset: -1px;
+}
+
 /* Tasks */
 .tasks-head {
   display: flex;
@@ -694,6 +1049,47 @@ textarea {
   margin: 2px 0 0;
   accent-color: #8fd18b;
   cursor: pointer;
+}
+/* Three-state task box: [ ] · [/] · [x] */
+.task-box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1.5px solid var(--muted);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+.task-box:hover {
+  border-color: var(--text-2);
+}
+.task-box svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.task-box.is-partial {
+  border-color: var(--accent);
+  background: rgba(242, 179, 61, 0.14);
+  color: var(--accent);
+}
+.task-box.is-done {
+  border-color: #8fd18b;
+  background: #8fd18b;
+  color: #16171a;
+}
+.pomo-task .task-box {
+  margin-top: 0;
 }
 .task-dropped-mark {
   width: 15px;
@@ -831,6 +1227,176 @@ textarea {
   margin-top: 8px;
   padding-top: 6px;
   border-top: 1px solid var(--border);
+}
+
+/* Schedule (Google Calendar) */
+.schedule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.schedule-head h2 {
+  flex: 1;
+  margin: 0;
+}
+.schedule-error {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(242, 179, 61, 0.1);
+  color: #f6d48f;
+}
+.schedule-empty {
+  margin: 2px 0 4px;
+}
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.event {
+  display: grid;
+  grid-template-columns: 92px auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 8px;
+}
+.event:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+.event.is-now {
+  background: rgba(143, 209, 139, 0.08);
+}
+.event-time {
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.event-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.event-loc {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.badge-now {
+  background: rgba(143, 209, 139, 0.18);
+  color: #b5e3b2;
+}
+.event-join {
+  text-decoration: none;
+  color: var(--text);
+}
+.schedule-later {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.event-day h3 {
+  margin: 10px 0 2px 6px;
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Next event, under the clock */
+.next-event {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: min(360px, 28vw);
+  margin-top: 10px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.next-event-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.next-event-join {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  text-decoration: none;
+}
+.next-event-join:hover {
+  background: var(--panel-2);
+}
+
+/* Calendar settings */
+.cal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-row input[type='color'] {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.cal-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.cal-name > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cal-status {
+  font-size: 11px;
+  color: var(--muted);
+}
+.cal-status.warn,
+.ok {
+  color: var(--accent);
+}
+.ok {
+  color: #8fd18b;
+  margin: 0;
+}
+.cal-form {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
 }
 
 /* Countdowns */
@@ -1153,10 +1719,12 @@ textarea {
 /* Notes */
 .note-input {
   width: 100%;
+  min-height: 180px;
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--panel-2);
+  line-height: 1.5;
   resize: vertical;
 }
 .cell-notes {
@@ -1185,6 +1753,248 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---- Pomodoro focus view ------------------------------------------------- */
+
+/* Registered so the tint can fade between modes. */
+@property --pomo-tint {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+.app.is-focus {
+  padding: 0;
+}
+.pomo {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px 32px;
+  background: radial-gradient(120% 70% at 50% 0%, var(--pomo-tint), transparent 70%), var(--bg);
+  transition: --pomo-tint 1.2s ease;
+  font-size: 14px;
+}
+.pomo.phase-focus {
+  --pomo-tint: rgba(229, 103, 107, 0.2);
+}
+.pomo.phase-short {
+  --pomo-tint: rgba(94, 196, 185, 0.18);
+}
+.pomo.phase-long {
+  --pomo-tint: rgba(141, 180, 232, 0.2);
+}
+.pomo-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+}
+.pomo-main {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  margin-top: 5vh;
+}
+.pomo-modes {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.pomo-mode {
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  color: var(--text-2);
+  font-size: 14px;
+  cursor: pointer;
+}
+.pomo-mode:hover {
+  color: var(--text);
+}
+.pomo-mode.is-on {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-weight: 600;
+}
+.pomo-time {
+  font-size: clamp(76px, 15vw, 152px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.pomo-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pomo-controls .btn {
+  font-size: 14px;
+  padding: 9px 16px;
+}
+.pomo-start {
+  min-width: 170px;
+  padding: 12px 28px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--text);
+  color: #16171a;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.pomo-start:hover {
+  background: #ffffff;
+}
+.pomo-set {
+  display: flex;
+  gap: 12px;
+  font-size: 18px;
+  color: var(--muted);
+}
+.pomo-set .is-done {
+  color: #8fd18b;
+}
+.pomo-working {
+  margin: 0;
+  color: var(--text-2);
+  text-align: center;
+}
+.pomo-working strong {
+  color: var(--text);
+}
+.pomo-tasks {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(31, 33, 38, 0.75);
+}
+.pomo-tasks h2 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pomo-tasks ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.pomo-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+.pomo-task:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.pomo-task.is-focus {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.pomo-task input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #8fd18b;
+  cursor: pointer;
+}
+.pomo-task-text {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.pomo-task.is-done .pomo-task-text {
+  color: var(--muted);
+  text-decoration: line-through;
+  cursor: default;
+}
+.pomo-star {
+  color: var(--accent);
+}
+.pomo-count {
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pomo-empty {
+  margin: 4px 0 10px;
+  color: var(--muted);
+}
+.pomo-add {
+  margin-bottom: 0;
+}
+.pomo-hints {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Running timer, next to the top-right controls */
+.pomo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pomo-pill.phase-focus {
+  border-color: rgba(229, 103, 107, 0.5);
+}
+.pomo-pill:hover {
+  background: var(--panel-2);
+}
+
+/* Stats line and settings */
+.pomo-stat {
+  margin: -2px 0 12px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.pomo-stat strong {
+  color: var(--text);
+}
+.pomo-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.pomo-field input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 /* ---- Context menu -------------------------------------------------------- */
@@ -1507,5 +2317,6 @@ kbd {
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
   }
 }

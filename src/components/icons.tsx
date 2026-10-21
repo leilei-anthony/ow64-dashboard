@@ -89,3 +89,18 @@ export const IconCheckSquare = (p: IconProps) => (
     <path d="M8 12l3 3 5-6" />
   </Svg>
 );
+
+export const IconRefresh = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M21 12a9 9 0 1 1-2.6-6.4" />
+    <path d="M21 3v6h-6" />
+  </Svg>
+);
+
+export const IconTimer = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="13" r="8" />
+    <path d="M12 9v4l2.5 2.5" />
+    <path d="M9.5 2h5" />
+  </Svg>
+);

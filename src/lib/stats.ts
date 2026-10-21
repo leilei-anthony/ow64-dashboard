@@ -4,6 +4,9 @@ import { countDone, milestoneDoneOn } from './cadence';
 
 export type HeatFilter =
   | { kind: 'all' }
+  | { kind: 'pomodoro' }
+  | { kind: 'habits' }
+  | { kind: 'habit'; habitId: string }
   | { kind: 'pillar'; pillarId: string }
   | { kind: 'action'; actionId: string };
 
@@ -35,6 +38,10 @@ export function dayCount(
   switch (filter.kind) {
     case 'all':
       return done.length;
+    case 'pomodoro':
+    case 'habits':
+    case 'habit':
+      return 0; // counted from the pomodoro / habit logs, not chart ticks
     case 'action':
       return done.includes(filter.actionId) ? 1 : 0;
     case 'pillar':

@@ -10,7 +10,14 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     modulePreload: { polyfill: false },
-    rollupOptions: { input: 'newtab.html' },
+    rollupOptions: {
+      // The new tab page, plus the background service worker that runs the pomodoro timer.
+      input: { newtab: 'newtab.html', background: 'src/background.ts' },
+      output: {
+        // The manifest points at background.js, so that one entry keeps a fixed name.
+        entryFileNames: (chunk) => (chunk.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js'),
+      },
+    },
   },
   test: {
     include: ['tests/**/*.test.ts'],

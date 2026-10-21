@@ -7,7 +7,30 @@ export interface StorageChange {
 }
 
 interface ChromeLike {
-  runtime?: { id?: string; getURL(path: string): string };
+  runtime?: {
+    id?: string;
+    getURL(path: string): string;
+    sendMessage?(message: unknown): Promise<unknown>;
+    onMessage?: {
+      addListener(cb: (message: unknown, sender: unknown, sendResponse: (r?: unknown) => void) => boolean | void): void;
+    };
+    onStartup?: { addListener(cb: () => void): void };
+    onInstalled?: { addListener(cb: () => void): void };
+  };
+  alarms?: {
+    create(name: string, info: { when: number }): Promise<void>;
+    clear(name: string): Promise<boolean>;
+    onAlarm: { addListener(cb: (alarm: { name: string }) => void): void };
+  };
+  notifications?: {
+    create(
+      id: string,
+      options: { type: 'basic'; iconUrl: string; title: string; message: string; silent?: boolean; priority?: number },
+    ): Promise<string>;
+    clear(id: string): Promise<boolean>;
+    onClicked: { addListener(cb: (id: string) => void): void };
+  };
+  tabs?: { create(p: { url?: string }): Promise<unknown> };
   storage?: {
     local: {
       get(keys: string | string[] | null): Promise<Record<string, unknown>>;
@@ -18,6 +41,11 @@ interface ChromeLike {
     onChanged: {
       addListener(cb: (changes: Record<string, StorageChange>, areaName: string) => void): void;
     };
+  };
+  permissions?: {
+    request(p: { origins?: string[]; permissions?: string[] }): Promise<boolean>;
+    contains(p: { origins?: string[]; permissions?: string[] }): Promise<boolean>;
+    remove(p: { origins?: string[]; permissions?: string[] }): Promise<boolean>;
   };
   search?: {
     query(info: { text: string; disposition?: 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW' }): Promise<void>;

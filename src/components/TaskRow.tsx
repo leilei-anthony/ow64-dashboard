@@ -6,16 +6,24 @@ import {
   deleteTask,
   dropTask,
   moveTask,
+  cycleTask,
   restoreTask,
+  setTaskStatus,
   toggleStar,
   toggleSubtask,
-  toggleTask,
 } from '../storage/tasks';
 import { addDays, shortDate } from '../lib/dates';
-import { carriedDays, isStale, nextOccurrence, recurrenceLabel, starredFor, taskStart } from '../lib/tasks';
+import { carriedDays, isStale, nextOccurrence, recurrenceLabel, starredFor, taskStart, taskStatus, type TaskStatus } from '../lib/tasks';
 import type { ActionInfo } from '../lib/stats';
 import { openMenu, taskDialog, type MenuItem } from '../ui';
 import { IconRepeat, IconStar } from './icons';
+import { TaskStatusBox } from './TaskStatusBox';
+
+const STATUS_ITEMS: { status: TaskStatus; label: string }[] = [
+  { status: 'todo', label: '[ ]  Not done' },
+  { status: 'partial', label: '[/]  In progress' },
+  { status: 'done', label: '[x]  Done' },
+];
 
 export type RowMode = 'open' | 'done' | 'dropped' | 'upcoming';
 
@@ -53,13 +61,20 @@ export function TaskRow({ task: t, day, mode, index, drag }: Props) {
 
   const onContextMenu = (e: MouseEvent) => {
     const items: MenuItem[] = [];
+    if (mode !== 'dropped') {
+      // Jump straight to any of the three states.
+      const current = taskStatus(t);
+      for (const s of STATUS_ITEMS) {
+        if (s.status !== current) items.push({ label: s.label, onSelect: () => setTaskStatus(t.id, s.status, doneDay) });
+      }
+    }
     if (canStar && (starred || !starFull)) items.push({ label: starred ? 'Remove from Top 3' : 'Add to Top 3', onSelect: () => toggleStar(t.id) });
     items.push({ label: 'Edit…', onSelect: () => (taskDialog.value = { id: t.id }) });
     if (mode === 'open' || mode === 'upcoming') {
       items.push({ label: 'Move to tomorrow', onSelect: () => moveTask(t.id, addDays(tday, 1)) });
       items.push({ label: 'Drop', onSelect: () => dropTask(t.id) });
-    } else {
-      items.push({ label: mode === 'done' ? 'Mark not done' : 'Restore', onSelect: () => restoreTask(t.id) });
+    } else if (mode === 'dropped') {
+      items.push({ label: 'Restore', onSelect: () => restoreTask(t.id) });
     }
     items.push({ label: 'Delete', onSelect: () => deleteTask(t.id) });
     openMenu(e, items);
@@ -74,12 +89,7 @@ export function TaskRow({ task: t, day, mode, index, drag }: Props) {
           ✕
         </span>
       ) : (
-        <input
-          type="checkbox"
-          checked={mode === 'done'}
-          aria-label={`${mode === 'done' ? 'Mark not done' : 'Complete'}: ${t.text}`}
-          onChange={() => toggleTask(t.id, doneDay)}
-        />
+        <TaskStatusBox task={t} onCycle={() => cycleTask(t.id, doneDay)} />
       )}
 
       <div class="task-body">
